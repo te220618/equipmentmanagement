@@ -12,6 +12,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Map;
@@ -21,12 +23,11 @@ import java.util.HashMap;
  * 設備管理コントローラークラス
  * 
  * 設備管理システムのWebコントローラーです。
- * 設備の一覧表示、登録、編集の画面処理とHTTPリクエストの処理を行います。
+ * 設備の一覧表示、登録の画面処理とHTTPリクエストの処理を行います。
  * 
  * 主な機能：
  * - 設備一覧表示（減価償却計算込み）
  * - 設備の新規登録
- * - 設備の編集・更新
  * 
  * @author Equipment Management Team
  * @version 1.0
@@ -150,7 +151,10 @@ public class EquipmentController {
                         lifespan);
                 dto.setElapsedYears(elapsed);
 
-                if (elapsed > lifespan) {
+                // 合計金額を計算（単価 × 数量）
+                double totalCost = e.getCost() * e.getQuantity();
+
+                if (elapsed >= lifespan) {
                     // 減価償却完了
                     dto.setDepreciationStatus("終了");
                     dto.setAnnualDepreciation(0.0);
@@ -158,16 +162,16 @@ public class EquipmentController {
                 } else {
                     // 減価償却継続中
                     double annualDep = depreciationService.calculateAnnualDepreciation(e);
-                    dto.setAnnualDepreciation(annualDep);
+                    dto.setAnnualDepreciation(annualDep * e.getQuantity()); // 数量を考慮
                     double bookValue = depreciationService.calculateBookValue(e, LocalDate.now());
-                    dto.setBookValue(bookValue);
-                    dto.setDepreciationStatus(String.format("%.2f", annualDep));
+                    dto.setBookValue(bookValue * e.getQuantity()); // 数量を考慮
+                    dto.setDepreciationStatus("");  // 未完了の場合は空欄
                 }
             } else {
                 // 購入日や耐用年数が不明な場合
-                dto.setDepreciationStatus("不明");
+                dto.setDepreciationStatus("");  // 不明の場合も空欄に変更
                 dto.setAnnualDepreciation(0.0);
-                dto.setBookValue(e.getCost());
+                dto.setBookValue(e.getCost() * e.getQuantity()); // 数量を考慮
             }
             return dto;
         }).collect(Collectors.toList());
@@ -205,9 +209,6 @@ public class EquipmentController {
      * @param year 購入年
      * @param month 購入月
      * @param day 購入日
-     * @param usageYear 使用期限年（オプション）
-     * @param usageMonth 使用期限月（オプション）
-     * @param usageDay 使用期限日（オプション）
      * @param equipment 登録する設備エンティティ
      * @return 設備一覧へのリダイレクト
      */
@@ -216,87 +217,29 @@ public class EquipmentController {
             @RequestParam("purchaseYear") int year,
             @RequestParam("purchaseMonth") int month,
             @RequestParam("purchaseDay") int day,
-            @RequestParam(value = "usageDeadlineYear", required = false) Integer usageYear,
-            @RequestParam(value = "usageDeadlineMonth", required = false) Integer usageMonth,
-            @RequestParam(value = "usageDeadlineDay", required = false) Integer usageDay,
             @ModelAttribute Equipment equipment) {
 
         // 購入日をセット
         equipment.setPurchaseDate(LocalDate.of(year, month, day));
         
-        // 使用期限をセット（値がある場合のみ）
-        if (usageYear != null && usageMonth != null && usageDay != null) {
-            equipment.setUsageDeadline(LocalDate.of(usageYear, usageMonth, usageDay));
-        }
+        // デフォルト値を設定
+        equipment.setLocationCode("1"); // デフォルトの設置場所
+        equipment.setIsBroken(false);
+        equipment.setIsAvailableForLoan(false);
+        equipment.setUsageDeadline(null);
         
-        // 設備を保存
-        equipmentRepository.save(equipment);
+        // 管理番号を自動生成
+        String managementNumber = generateManagementNumber();
+        equipment.setManagementNumber(managementNumber);
         
-        return "redirect:/equipment/list";
-    }
-
-    /**
-     * 設備編集フォーム表示
-     * 
-     * 指定されたIDの設備編集画面を表示します。
-     * 
-     * @param id 編集する設備のID
-     * @param model SpringのModelオブジェクト
-     * @return 設備編集画面のテンプレート名
-     */
-    @GetMapping("/equipment/edit")
-    public String editEquipment(@RequestParam("id") Integer id, Model model) {
-        // 指定されたIDの設備を取得
-        Equipment equipment = equipmentRepository.findById(id).orElse(null);
-        
-        // 設備が見つからない場合は一覧に戻る
-        if (equipment == null) {
-            return "redirect:/equipment/list";
-        }
-        
-        // カテゴリーとサブカテゴリーのオプションを取得
-        List<Category> categories = categoryRepository.findAll();
-        
-        // モデルに追加
-        model.addAttribute("equipment", equipment);
-        model.addAttribute("categories", categories);
-        model.addAttribute("locations", locationRepository.findAll());
-        
-        return "equipment_edit";
-    }
-
-    /**
-     * 設備更新処理
-     * 
-     * 設備情報を更新します。
-     * 
-     * @param year 購入年
-     * @param month 購入月
-     * @param day 購入日
-     * @param usageYear 使用期限年（オプション）
-     * @param usageMonth 使用期限月（オプション）
-     * @param usageDay 使用期限日（オプション）
-     * @param equipment 更新する設備エンティティ
-     * @return 設備一覧へのリダイレクト
-     */
-    @PostMapping("/equipment/update")
-    public String updateEquipment(
-            @RequestParam("purchaseYear") int year,
-            @RequestParam("purchaseMonth") int month,
-            @RequestParam("purchaseDay") int day,
-            @RequestParam(value = "usageDeadlineYear", required = false) Integer usageYear,
-            @RequestParam(value = "usageDeadlineMonth", required = false) Integer usageMonth,
-            @RequestParam(value = "usageDeadlineDay", required = false) Integer usageDay,
-            @ModelAttribute Equipment equipment) {
-
-        // 購入日をセット
-        equipment.setPurchaseDate(LocalDate.of(year, month, day));
-        
-        // 使用期限をセット（値がある場合のみ）
-        if (usageYear != null && usageMonth != null && usageDay != null) {
-            equipment.setUsageDeadline(LocalDate.of(usageYear, usageMonth, usageDay));
-        } else {
-            equipment.setUsageDeadline(null);
+        // サブカテゴリーIDを設定
+        if (equipment.getItemCode() != null) {
+            try {
+                Integer subcategoryId = Integer.parseInt(equipment.getItemCode());
+                equipment.setSubcategoryId(subcategoryId);
+            } catch (NumberFormatException e) {
+                // 変換エラーの場合は何もしない
+            }
         }
         
         // 設備を保存
@@ -347,5 +290,27 @@ public class EquipmentController {
         } catch (NumberFormatException e) {
             return "不明";
         }
+    }
+    
+    /**
+     * 管理番号を自動生成
+     * 
+     * 現在の日付と連番を組み合わせた管理番号を生成します。
+     * 形式: EQ-YYYYMMDD-XXX (XXXは連番)
+     * 
+     * @return 生成された管理番号
+     */
+    private String generateManagementNumber() {
+        LocalDateTime now = LocalDateTime.now();
+        String datePart = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        
+        // 同じ日付の最大の管理番号を検索して連番を決定
+        String prefix = "EQ-" + datePart + "-";
+        long count = equipmentRepository.count() + 1;
+        
+        // 連番部分を3桁で生成
+        String sequencePart = String.format("%03d", count);
+        
+        return prefix + sequencePart;
     }
 }

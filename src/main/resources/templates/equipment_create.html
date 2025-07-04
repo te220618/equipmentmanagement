@@ -56,7 +56,8 @@
         input[type="text"], 
         input[type="number"], 
         input[type="date"], 
-        select {
+        select,
+        textarea {
             width: 100%;
             padding: 8px 12px;
             border: 1px solid #ddd;
@@ -65,10 +66,16 @@
             box-sizing: border-box;
         }
 
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
         input[type="text"]:focus, 
         input[type="number"]:focus, 
         input[type="date"]:focus, 
-        select:focus {
+        select:focus,
+        textarea:focus {
             outline: none;
             border-color: #4CAF50;
             box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
@@ -155,14 +162,10 @@
         <form th:action="@{/equipment/create}" method="post" th:object="${equipment}">
             <table>
                 <tr>
-                    <th>管理番号 <span class="required">*</span></th>
-                    <td><input type="text" th:field="*{managementNumber}" required /></td>
-                </tr>
-                <tr>
                     <th>カテゴリー <span class="required">*</span></th>
                     <td>
                         <select id="categoryCode" th:field="*{categoryCode}" required>
-                            <option value="" disabled>選択してください</option>
+                            <option value="" selected>選択してください</option>
                             <option th:each="cat : ${categories}" th:value="${cat.id}"
                                     th:text="${cat.name}"></option>
                         </select>
@@ -172,7 +175,7 @@
                     <th>サブカテゴリー <span class="required">*</span></th>
                     <td>
                         <select id="itemCode" th:field="*{itemCode}" required>
-                            <option value="" disabled>選択してください</option>
+                            <option value="" selected>選択してください</option>
                         </select>
                     </td>
                 </tr>
@@ -190,7 +193,7 @@
                 </tr>
                 <tr>
                     <th>仕様</th>
-                    <td><input type="text" th:field="*{specification}" /></td>
+                    <td><textarea th:field="*{specification}"></textarea></td>
                 </tr>
                 <tr>
                     <th>取得価格 <span class="required">*</span></th>
@@ -213,49 +216,8 @@
                     <th>数量 <span class="required">*</span></th>
                     <td><input type="number" min="1" th:field="*{quantity}" required /></td>
                 </tr>
-                <tr>
-                    <th>設置場所 <span class="required">*</span></th>
-                    <td>
-                        <select th:field="*{locationCode}" required>
-                            <option value="" disabled>選択してください</option>
-                            <option th:each="loc : ${locations}" th:value="${loc.id}"
-                                    th:text="${loc.name}"></option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <th>使用不能</th>
-                    <td>
-                        <div class="checkbox-container">
-                            <input type="checkbox" th:field="*{isBroken}" />
-                            <label>使用できない状態です</label>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <th>貸出可能</th>
-                    <td>
-                        <div class="checkbox-container">
-                            <input type="checkbox" th:field="*{isAvailableForLoan}" />
-                            <label>貸出が可能です</label>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <th>使用期限</th>
-                    <td>
-                        <div class="date-inputs">
-                            <input type="number" name="usageDeadlineYear" min="1900" max="2100" placeholder="年">
-                            <span>年</span>
-                            <input type="number" name="usageDeadlineMonth" min="1" max="12" placeholder="月">
-                            <span>月</span>
-                            <input type="number" name="usageDeadlineDay" min="1" max="31" placeholder="日">
-                            <span>日</span>
-                        </div>
-                    </td>
-                </tr>
             </table>
-
+            
             <div class="button-container">
                 <button type="submit" class="btn-primary">登録</button>
                 <a th:href="@{/equipment/list}" class="btn-secondary">キャンセル</a>
@@ -265,32 +227,30 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // カテゴリーが変更されたときにサブカテゴリーを動的に読み込む
             const categorySelect = document.getElementById('categoryCode');
             const itemSelect = document.getElementById('itemCode');
             
             categorySelect.addEventListener('change', function() {
                 const categoryId = this.value;
+                if (!categoryId) return;
                 
-                // カテゴリーが選択されていない場合
-                if (!categoryId) {
-                    itemSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
-                    return;
-                }
-                
-                // サブカテゴリーを取得
+                // サブカテゴリーを取得するAPIを呼び出す
                 fetch(`/equipment/api/subcategories/${categoryId}`)
                     .then(response => response.json())
                     .then(data => {
-                        itemSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
+                        // サブカテゴリーのセレクトボックスをクリア
+                        itemSelect.innerHTML = '<option value="" selected>選択してください</option>';
                         
-                        data.forEach(item => {
+                        // 取得したサブカテゴリーを追加
+                        data.forEach(subcategory => {
                             const option = document.createElement('option');
-                            option.value = item.id;
-                            option.textContent = item.name;
+                            option.value = subcategory.id;
+                            option.textContent = subcategory.name;
                             itemSelect.appendChild(option);
                         });
                     })
-                    .catch(error => console.error('エラー:', error));
+                    .catch(error => console.error('サブカテゴリーの取得に失敗しました:', error));
             });
         });
     </script>
