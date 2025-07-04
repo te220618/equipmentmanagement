@@ -6,22 +6,16 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
+            margin: 20px;
             background-color: #f5f5f5;
-            min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: center;
         }
 
         h1 {
             color: #333;
             border-bottom: 2px solid #4CAF50;
             padding-bottom: 10px;
-            width: 100%;
-            text-align: center;
-            margin-bottom: 30px;
         }
 
         .form-container {
@@ -29,9 +23,8 @@
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            width: 100%;
             max-width: 800px;
-            margin: 0 auto;
+            width: 100%;
         }
 
         table {
@@ -152,35 +145,33 @@
     <div class="form-container">
         <h1>設備編集</h1>
 
-        <form th:action="@{/equipment/update}" th:object="${equipmentForm}" method="post">
+        <form th:action="@{/equipment/update}" th:object="${equipment}" method="post">
             <input type="hidden" th:field="*{id}" />
-            <input type="hidden" th:field="*{categoryCode}" id="hiddenCategoryCode" />
-            <input type="hidden" th:field="*{itemCode}" id="hiddenItemCode" />
             <table>
                 <tr>
                     <th>管理番号 <span class="required">*</span></th>
                     <td><input type="text" th:field="*{managementNumber}" required /></td>
                 </tr>
                 <tr>
-                    <th>カテゴリ <span class="required">*</span></th>
+                    <th>カテゴリー <span class="required">*</span></th>
                     <td>
-                        <select id="categorySelect" required>
+                        <select id="categoryCode" th:field="*{categoryCode}" required>
                             <option value="" disabled>選択してください</option>
-                            <option th:each="cat : ${categoryOptions}" th:value="${cat.code}"
-                                    th:text="${cat.label}"></option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}"
+                                    th:text="${cat.name}"></option>
                         </select>
                     </td>
                 </tr>
                 <tr>
-                    <th>品目 <span class="required">*</span></th>
+                    <th>サブカテゴリー <span class="required">*</span></th>
                     <td>
-                        <select id="itemSelect" required>
+                        <select id="itemCode" th:field="*{itemCode}" required>
                             <option value="" disabled>選択してください</option>
                         </select>
                     </td>
                 </tr>
                 <tr>
-                    <th>名前 <span class="required">*</span></th>
+                    <th>品名 <span class="required">*</span></th>
                     <td><input type="text" th:field="*{name}" required /></td>
                 </tr>
                 <tr>
@@ -220,15 +211,9 @@
                     <th>設置場所 <span class="required">*</span></th>
                     <td>
                         <select th:field="*{locationCode}" required>
-                            <option value="" disabled th:selected="${equipmentForm.locationCode == null}">選択してください</option>
-                            <option th:each="loc : ${locationOptions}" th:value="${loc}"
-                                th:text="${loc == 'TOKYO' ? '東京本店' :
-                                          loc == 'SENDAI' ? '仙台支店' :
-                                          loc == 'NIIGATA' ? '新潟支店' :
-                                          loc == 'YOKOHAMA' ? '横浜支店' :
-                                          loc == 'OSAKA' ? '大阪支店' :
-                                          loc == 'SAITAMA' ? '埼玉支店' : '不明'}"
-                                th:selected="${equipmentForm.locationCode == loc}">
+                            <option value="" disabled>選択してください</option>
+                            <option th:each="loc : ${locations}" th:value="${loc.id}"
+                                th:text="${loc.name}">
                             </option>
                         </select>
                     </td>
@@ -264,15 +249,6 @@
                         </div>
                     </td>
                 </tr>
-                <tr>
-                    <th>廃棄済み</th>
-                    <td>
-                        <div class="checkbox-container">
-                            <input type="checkbox" th:field="*{isDisposed}" />
-                            <label>廃棄済みです</label>
-                        </div>
-                    </td>
-                </tr>
             </table>
 
             <div class="button-container">
@@ -282,95 +258,66 @@
         </form>
     </div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    const currentCategoryCode = /*[[${equipmentForm.categoryCode}]]*/ null;
-    const currentItemCode = /*[[${equipmentForm.itemCode}]]*/ null;
-    const currentPurchaseDate = /*[[${equipmentForm.purchaseDate}]]*/ null;
-    const currentUsageDeadline = /*[[${equipmentForm.usageDeadline}]]*/ null;
-
-    const categorySelect = document.getElementById('categorySelect');
-    const itemSelect = document.getElementById('itemSelect');
-    const hiddenCategoryCode = document.getElementById('hiddenCategoryCode');
-    const hiddenItemCode = document.getElementById('hiddenItemCode');
-
-    // 購入日の設定
-    const purchaseYearInput = document.getElementById('purchaseYear');
-    const purchaseMonthInput = document.getElementById('purchaseMonth');
-    const purchaseDayInput = document.getElementById('purchaseDay');
-
-    // 使用期限の設定
-    const usageDeadlineYearInput = document.getElementById('usageDeadlineYear');
-    const usageDeadlineMonthInput = document.getElementById('usageDeadlineMonth');
-    const usageDeadlineDayInput = document.getElementById('usageDeadlineDay');
-
-    // カテゴリ変更時に品目コードを動的取得
-    async function updateItemOptions() {
-        const selectedCat = categorySelect.value;
-        
-        // 品目選択をクリア
-        itemSelect.innerHTML = '<option value="" disabled>選択してください</option>';
-        
-        if (!selectedCat) {
-            hiddenCategoryCode.value = '';
-            hiddenItemCode.value = '';
-            return;
+    <script th:inline="javascript">
+        // 購入日のデフォルト値を設定
+        const purchaseDate = /*[[${equipment.purchaseDate}]]*/ null;
+        if (purchaseDate) {
+            const [year, month, day] = purchaseDate.split('-');
+            document.getElementById('purchaseYear').value = parseInt(year);
+            document.getElementById('purchaseMonth').value = parseInt(month);
+            document.getElementById('purchaseDay').value = parseInt(day);
         }
-        
-        // 隠しフィールドを更新
-        hiddenCategoryCode.value = selectedCat;
-        
-        try {
-            const response = await fetch(`/equipment/api/items/${selectedCat}`);
-            const items = await response.json();
+
+        // 使用期限のデフォルト値を設定
+        const usageDeadline = /*[[${equipment.usageDeadline}]]*/ null;
+        if (usageDeadline) {
+            const [year, month, day] = usageDeadline.split('-');
+            document.getElementById('usageDeadlineYear').value = parseInt(year);
+            document.getElementById('usageDeadlineMonth').value = parseInt(month);
+            document.getElementById('usageDeadlineDay').value = parseInt(day);
+        }
+
+        // カテゴリー選択時のサブカテゴリー更新
+        document.addEventListener('DOMContentLoaded', function() {
+            const categorySelect = document.getElementById('categoryCode');
+            const itemSelect = document.getElementById('itemCode');
             
-            items.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.code;
-                option.text = item.label;
-                if (currentItemCode === item.code) {
-                    option.selected = true;
-                    hiddenItemCode.value = item.code;
+            categorySelect.addEventListener('change', function() {
+                const categoryId = this.value;
+                
+                // カテゴリーが選択されていない場合
+                if (!categoryId) {
+                    itemSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
+                    return;
                 }
-                itemSelect.appendChild(option);
+                
+                // サブカテゴリーを取得
+                fetch(`/equipment/api/subcategories/${categoryId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        itemSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
+                        
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.name;
+                            itemSelect.appendChild(option);
+                        });
+
+                        // 現在のサブカテゴリーがあればそれを選択
+                        const currentSubcategory = /*[[${equipment.itemCode}]]*/ null;
+                        if (currentSubcategory) {
+                            itemSelect.value = currentSubcategory;
+                        }
+                    })
+                    .catch(error => console.error('エラー:', error));
             });
-        } catch (error) {
-            console.error('品目コード取得エラー:', error);
-        }
-    }
 
-    // 品目選択時に隠しフィールドを更新
-    itemSelect.addEventListener('change', function() {
-        hiddenItemCode.value = this.value;
-    });
-
-    categorySelect.addEventListener('change', updateItemOptions);
-
-    // 日付文字列をパースして年月日の個別入力に設定する関数
-    function setParsedDate(dateString, yearInput, monthInput, dayInput) {
-        if (dateString) {
-            const date = new Date(dateString);
-            yearInput.value = date.getFullYear();
-            monthInput.value = date.getMonth() + 1;
-            dayInput.value = date.getDate();
-        }
-    }
-
-    // ページロード時にカテゴリ選択と品目コード選択を復元
-    window.addEventListener('load', () => {
-        if (currentCategoryCode) {
-            categorySelect.value = currentCategoryCode;
-            updateItemOptions();
-        }
-
-        // 購入日を年月日の個別入力に設定
-        setParsedDate(currentPurchaseDate, purchaseYearInput, purchaseMonthInput, purchaseDayInput);
-
-        // 使用期限を年月日の個別入力に設定
-        setParsedDate(currentUsageDeadline, usageDeadlineYearInput, usageDeadlineMonthInput, usageDeadlineDayInput);
-    });
-    /*]]>*/
-</script>
-
+            // ページ読み込み時に一度サブカテゴリーを更新
+            if (categorySelect.value) {
+                categorySelect.dispatchEvent(new Event('change'));
+            }
+        });
+    </script>
 </body>
 </html>

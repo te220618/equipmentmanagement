@@ -12,12 +12,11 @@ import java.time.LocalDateTime;
  * 設備の詳細情報を格納するデータベーステーブル（equipment）にマッピングされます。
  * 
  * 主な機能：
- * - 設備の基本情報（名前、型番、メーカー、仕様など）
+ * - 設備の基本情報（品名、型番、メーカー、仕様など）
  * - 購入情報（購入日、金額、数量）
  * - 設置場所情報
  * - 寿命・使用期限管理
  * - 貸出可能・故障状態管理
- * - 廃棄状態管理
  * 
  * @author Equipment Management Team
  * @version 1.0
@@ -37,13 +36,17 @@ public class Equipment {
     @Column(name = "management_number", nullable = false, unique = true)
     private String managementNumber;
 
-    /** カテゴリーコード（設備の大分類） */
+    /** メインカテゴリーコード（設備の大分類） */
     private String categoryCode;
     
-    /** 品目コード（設備の小分類） */
+    /** サブカテゴリーコード（設備の小分類） */
     private String itemCode;
     
-    /** 設備名 */
+    /** サブカテゴリーID */
+    @Column(name = "subcategory_id")
+    private Integer subcategoryId;
+    
+    /** 品名 */
     private String name;
     
     /** 型番 */
@@ -67,9 +70,6 @@ public class Equipment {
     /** 設置場所コード */
     private String locationCode;
     
-    /** 廃棄済みフラグ（デフォルト：false） */
-    private Boolean isDisposed = false;
-
     /** 耐用年数 */
     private Integer lifespanYears;
     

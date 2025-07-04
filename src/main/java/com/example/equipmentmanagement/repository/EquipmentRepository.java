@@ -2,6 +2,7 @@ package com.example.equipmentmanagement.repository;
 
 import com.example.equipmentmanagement.entity.Equipment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
 
 /**
  * 設備リポジトリインターフェース
@@ -24,6 +25,28 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @since 2024
  */
 public interface EquipmentRepository extends JpaRepository<Equipment, Integer> {
-    // Spring Data JPAにより基本的なCRUD操作が自動実装される
-    // 必要に応じてカスタムクエリメソッドを追加可能
+    /**
+     * 設置場所コードで設備を検索
+     * 
+     * @param locationCode 設置場所コード
+     * @return 該当する設備のリスト
+     */
+    List<Equipment> findByLocationCode(String locationCode);
+    
+    /**
+     * 品名の部分一致で設備を検索（大文字小文字を区別しない）
+     * 
+     * @param name 検索する品名（部分一致）
+     * @return 該当する設備のリスト
+     */
+    List<Equipment> findByNameContainingIgnoreCase(String name);
+    
+    /**
+     * 設置場所コードと品名の部分一致で設備を検索（大文字小文字を区別しない）
+     * 
+     * @param locationCode 設置場所コード
+     * @param name 検索する品名（部分一致）
+     * @return 該当する設備のリスト
+     */
+    List<Equipment> findByLocationCodeAndNameContainingIgnoreCase(String locationCode, String name);
 }

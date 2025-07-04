@@ -25,11 +25,11 @@ public class EquipmentDto {
     private Integer id;
     /** 管理番号 */
     private String managementNumber;
-    /** カテゴリーコード */
+    /** メインカテゴリーコード */
     private String categoryCode;
-    /** 品目コード */
+    /** サブカテゴリーコード */
     private String itemCode;
-    /** 設備名 */
+    /** 品名 */
     private String name;
     /** 購入価格 */
     private Double cost;
@@ -39,8 +39,6 @@ public class EquipmentDto {
     private Integer quantity;
     /** 設置場所コード */
     private String locationCode;
-    /** 廃棄済みフラグ */
-    private Boolean isDisposed;
 
     /** 耐用年数 */
     private Integer lifespanYears;
@@ -68,6 +66,10 @@ public class EquipmentDto {
     private String locationLabel;
     /** 使用期限 */
     private LocalDate usageDeadline;
+    /** カテゴリー名（表示用） */
+    private String categoryName;
+    /** サブカテゴリー名（表示用） */
+    private String subcategoryName;
 
     // ========== Getter/Setter メソッド ==========
 
@@ -81,19 +83,19 @@ public class EquipmentDto {
     /** 管理番号のセッター */
     public void setManagementNumber(String managementNumber) { this.managementNumber = managementNumber; }
 
-    /** カテゴリーコードのゲッター */
+    /** メインカテゴリーコードのゲッター */
     public String getCategoryCode() { return categoryCode; }
-    /** カテゴリーコードのセッター */
+    /** メインカテゴリーコードのセッター */
     public void setCategoryCode(String categoryCode) { this.categoryCode = categoryCode; }
 
-    /** 品目コードのゲッター */
+    /** サブカテゴリーコードのゲッター */
     public String getItemCode() { return itemCode; }
-    /** 品目コードのセッター */
+    /** サブカテゴリーコードのセッター */
     public void setItemCode(String itemCode) { this.itemCode = itemCode; }
 
-    /** 設備名のゲッター */
+    /** 品名のゲッター */
     public String getName() { return name; }
-    /** 設備名のセッター */
+    /** 品名のセッター */
     public void setName(String name) { this.name = name; }
 
     /** 購入価格のゲッター */
@@ -115,11 +117,6 @@ public class EquipmentDto {
     public String getLocationCode() { return locationCode; }
     /** 設置場所コードのセッター */
     public void setLocationCode(String locationCode) { this.locationCode = locationCode; }
-
-    /** 廃棄済みフラグのゲッター */
-    public Boolean getIsDisposed() { return isDisposed; }
-    /** 廃棄済みフラグのセッター */
-    public void setIsDisposed(Boolean isDisposed) { this.isDisposed = isDisposed; }
 
     /** 耐用年数のゲッター */
     public Integer getLifespanYears() { return lifespanYears; }
@@ -182,6 +179,16 @@ public class EquipmentDto {
     public LocalDate getUsageDeadline() { return usageDeadline; }
     /** 使用期限のセッター */
     public void setUsageDeadline(LocalDate usageDeadline) { this.usageDeadline = usageDeadline; }
+
+    /** カテゴリー名のゲッター */
+    public String getCategoryName() { return categoryName; }
+    /** カテゴリー名のセッター */
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
+    /** サブカテゴリー名のゲッター */
+    public String getSubcategoryName() { return subcategoryName; }
+    /** サブカテゴリー名のセッター */
+    public void setSubcategoryName(String subcategoryName) { this.subcategoryName = subcategoryName; }
 
     /**
      * カテゴリーオプション内部クラス

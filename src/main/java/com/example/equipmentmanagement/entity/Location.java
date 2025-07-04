@@ -23,13 +23,18 @@ import lombok.Data;
 @Table(name = "location")
 public class Location {
 
-    /** 場所コード（主キー、例：TOKYO, SENDAI等） */
+    /** 場所ID（主キー） */
     @Id
-    private String code;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
     /** 場所名（表示用、例：東京本店、仙台支店等） */
     private String name;
 
+    /** 場所コード */
+    private String code;
+
     /** 親場所コード（階層構造用、オプショナル） */
+    @Column(name = "parent_code")
     private String parentCode;
 }

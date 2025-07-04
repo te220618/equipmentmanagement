@@ -152,28 +152,32 @@
     <div class="form-container">
         <h1>新規設備登録</h1>
 
-        <form th:action="@{/equipment/create}" method="post" th:object="${equipmentForm}">
+        <form th:action="@{/equipment/create}" method="post" th:object="${equipment}">
             <table>
                 <tr>
-                    <th>カテゴリ <span class="required">*</span></th>
+                    <th>管理番号 <span class="required">*</span></th>
+                    <td><input type="text" th:field="*{managementNumber}" required /></td>
+                </tr>
+                <tr>
+                    <th>カテゴリー <span class="required">*</span></th>
                     <td>
-                        <select id="categorySelect" th:field="*{categoryCode}" required>
-                            <option value="" disabled th:selected="${equipmentForm.categoryCode == null}">選択してください</option>
-                            <option th:each="cat : ${categoryOptions}" th:value="${cat.code}"
-                                    th:text="${cat.label}"></option>
+                        <select id="categoryCode" th:field="*{categoryCode}" required>
+                            <option value="" disabled>選択してください</option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}"
+                                    th:text="${cat.name}"></option>
                         </select>
                     </td>
                 </tr>
                 <tr>
-                    <th>品目 <span class="required">*</span></th>
+                    <th>サブカテゴリー <span class="required">*</span></th>
                     <td>
-                        <select id="itemSelect" th:field="*{itemCode}" required>
-                            <option value="" disabled th:selected="${equipmentForm.itemCode == null}">選択してください</option>
+                        <select id="itemCode" th:field="*{itemCode}" required>
+                            <option value="" disabled>選択してください</option>
                         </select>
                     </td>
                 </tr>
                 <tr>
-                    <th>名前 <span class="required">*</span></th>
+                    <th>品名 <span class="required">*</span></th>
                     <td><input type="text" th:field="*{name}" required /></td>
                 </tr>
                 <tr>
@@ -213,14 +217,9 @@
                     <th>設置場所 <span class="required">*</span></th>
                     <td>
                         <select th:field="*{locationCode}" required>
-                            <option value="" disabled th:selected="${equipmentForm.locationCode == null}">選択してください</option>
-                            <option th:each="loc : ${locationOptions}" th:value="${loc}"
-                                    th:text="${loc == 'TOKYO' ? '東京本店' :
-                                              loc == 'SENDAI' ? '仙台支店' :
-                                              loc == 'NIIGATA' ? '新潟支店' :
-                                              loc == 'YOKOHAMA' ? '横浜支店' :
-                                              loc == 'OSAKA' ? '大阪支店' :
-                                              loc == 'SAITAMA' ? '埼玉支店' : '不明'}"></option>
+                            <option value="" disabled>選択してください</option>
+                            <option th:each="loc : ${locations}" th:value="${loc.id}"
+                                    th:text="${loc.name}"></option>
                         </select>
                     </td>
                 </tr>
@@ -255,15 +254,6 @@
                         </div>
                     </td>
                 </tr>
-                <tr>
-                    <th>廃棄済み</th>
-                    <td>
-                        <div class="checkbox-container">
-                            <input type="checkbox" th:field="*{isDisposed}" />
-                            <label>廃棄済みです</label>
-                        </div>
-                    </td>
-                </tr>
             </table>
 
             <div class="button-container">
@@ -273,51 +263,36 @@
         </form>
     </div>
 
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const selectedCategory = /*[[${equipmentForm.categoryCode != null ? '\'' + equipmentForm.categoryCode + '\'' : 'null'}]]*/ null;
-        const selectedItem = /*[[${equipmentForm.itemCode != null ? '\'' + equipmentForm.itemCode + '\'' : 'null'}]]*/ null;
-
-        const categorySelect = document.getElementById('categorySelect');
-        const itemSelect = document.getElementById('itemSelect');
-
-        // カテゴリ変更時に品目コードを動的取得
-        async function updateItemOptions() {
-            const selectedCat = categorySelect.value;
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const categorySelect = document.getElementById('categoryCode');
+            const itemSelect = document.getElementById('itemCode');
             
-            // 品目選択をクリア
-            itemSelect.innerHTML = '<option value="" disabled>選択してください</option>';
-            
-            if (!selectedCat) return;
-            
-            try {
-                const response = await fetch(`/equipment/api/items/${selectedCat}`);
-                const items = await response.json();
+            categorySelect.addEventListener('change', function() {
+                const categoryId = this.value;
                 
-                items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.code;
-                    option.text = item.label;
-                    if (selectedItem === item.code) {
-                        option.selected = true;
-                    }
-                    itemSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('品目コード取得エラー:', error);
-            }
-        }
-
-        categorySelect.addEventListener('change', updateItemOptions);
-
-        // ページロード時にカテゴリ選択と品目コード選択を復元
-        window.addEventListener('load', () => {
-            if (selectedCategory) {
-                categorySelect.value = selectedCategory;
-                updateItemOptions();
-            }
+                // カテゴリーが選択されていない場合
+                if (!categoryId) {
+                    itemSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
+                    return;
+                }
+                
+                // サブカテゴリーを取得
+                fetch(`/equipment/api/subcategories/${categoryId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        itemSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
+                        
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.name;
+                            itemSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('エラー:', error));
+            });
         });
-        /*]]>*/
     </script>
 </body>
 </html>
