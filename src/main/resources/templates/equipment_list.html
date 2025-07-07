@@ -6,7 +6,8 @@
 - 設備の基本情報表示
 - 減価償却計算結果の表示
 - 設備の状態による行の色分け
-- 新規登録への遷移
+- 新規登録・一括削除への遷移
+- 個別編集機能
 -->
 <html xmlns:th="http://www.thymeleaf.org">
 
@@ -33,6 +34,11 @@
             background-color: #eee;
         }
 
+        /* アクションボタンのコンテナ */
+        .action-buttons form {
+            display: inline-block;
+            margin: 0 4px;
+        }
 
         /* 〇マーク（貸出可能・使用不能フラグ）のスタイル */
         .circle {
@@ -71,6 +77,41 @@
             background-color: #45a049;
         }
 
+        /* 編集ボタンのスタイル（青色） */
+        .edit-button {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .edit-button:hover {
+            background-color: #0b7dda;
+        }
+
+        /* 削除モードボタンのスタイル（赤色） */
+        .delete-mode-button {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .delete-mode-button:hover {
+            background-color: #da190b;
+        }
+
+        /* 検索ボタンのスタイル（紫色） */
+        .search-button {
+            background-color: #9C27B0;
+            color: white;
+        }
+
+        .search-button:hover {
+            background-color: #7B1FA2;
+        }
+
+        /* 減価償却完了設備の行スタイル（青系背景） */
+        .depreciation-completed {
+            background-color: #e3f2fd !important;
+        }
+
         /* 破損設備の行スタイル（グレーアウト） */
         .broken-equipment {
             background-color: #f5f5f5 !important;
@@ -83,87 +124,260 @@
             color: #888 !important;
         }
 
+        /* 減価償却完了セルの特別スタイル（強調表示） */
+        .depreciation-completed-cell {
+            background-color: #2196f3 !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+        }
+
         /* グレーアウト時でも〇マークは見やすく */
         .broken-equipment .circle {
             color: #666 !important;
             font-weight: bold;
         }
-        
+
+        /* ラジオボタンのスタイル */
+        .radio-select {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* エラーメッセージの吹き出しスタイル */
+        .error-tooltip {
+            position: absolute;
+            background-color: #f44336;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+            max-width: 300px;
+            text-align: center;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .error-tooltip:after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -10px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: #f44336 transparent transparent transparent;
+        }
+
+        /* 相対位置を設定 */
+        .radio-container {
+            position: relative;
+        }
+
+        /* 検索結果表示用スタイル */
+        .search-result-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-left: 5px solid #4CAF50;
+            border-radius: 4px;
+        }
+
+        .search-result-info h3 {
+            margin-top: 0;
+            color: #2E7D32;
+        }
+
+        .search-result-info p {
+            margin-bottom: 0;
+        }
+
+        .no-results {
+            background-color: #ffebee;
+            border-left-color: #f44336;
+        }
+
+        .no-results h3 {
+            color: #c62828;
+        }
         /* 改行を維持するスタイル */
         .preserve-linebreaks {
             white-space: pre-line;
         }
     </style>
+
 </head>
 
 <body>
     <!-- ページタイトル -->
     <h1>設備一覧</h1>
 
+    <!-- 検索結果表示（検索パラメータがある場合のみ表示） -->
+    <div th:if="${searchType != null}" class="search-result-info" th:classappend="${equipments.isEmpty() ? 'no-results' : ''}">
+        <h3 th:if="${!equipments.isEmpty()}">検索結果</h3>
+        <h3 th:if="${equipments.isEmpty()}">検索結果がありません</h3>
+        <p th:if="${searchType == 'location' && searchLocation != null && !searchLocation.isEmpty()}">
+            設置場所: <span th:text="${@locationRepository.findById(T(java.lang.Integer).parseInt(searchLocation)).orElse(new com.example.equipmentmanagement.entity.Location()).getName()}"></span>
+        </p>
+        <p th:if="${searchType == 'name' && searchName != null && !searchName.isEmpty()}">
+            品名に "<span th:text="${searchName}"></span>" を含む
+        </p>
+        <p th:if="${searchType == 'both'}">
+            <span th:if="${searchLocation != null && !searchLocation.isEmpty()}">
+                設置場所: <span th:text="${@locationRepository.findById(T(java.lang.Integer).parseInt(searchLocation)).orElse(new com.example.equipmentmanagement.entity.Location()).getName()}"></span>
+            </span>
+            <span th:if="${searchName != null && !searchName.isEmpty()}">
+                <span th:if="${searchLocation != null && !searchLocation.isEmpty()}"> かつ </span>
+                品名に "<span th:text="${searchName}"></span>" を含む
+            </span>
+        </p>
+        <p th:if="${!equipments.isEmpty()}" th:text="${equipments.size()} + '件の設備が見つかりました'"></p>
+    </div>
+
     <!-- 上部操作ボタン群 -->
     <div class="top-buttons">
+        
         <!-- 新規登録ボタン -->
         <a th:href="@{/equipment/create-form}">
-            <button type="button" >(＋) 新規登録</button>
+            <button type="button" class="action-button register-button">(＋) 新規登録</button>
         </a>
+       
+    </div>
+
+    <!-- エラーメッセージの吹き出し -->
+    <div class="radio-container">
+        <div id="errorTooltip" class="error-tooltip">編集したい設備を選択してください</div>
     </div>
 
     <!-- 設備一覧テーブル -->
-    <table>
-        <!-- テーブルヘッダー -->
+    <table th:if="${!equipments.isEmpty()}">
         <thead>
             <tr>
-                <th>設備名</th>
+                <!-- テーブルヘッダー定義 -->
+                <th>選択</th>
+                <th>管理番号</th>
+                <th>品名</th>
                 <th>型番</th>
                 <th>メーカー</th>
                 <th>仕様</th>
                 <th>購入日</th>
-                <th>台数</th>
-                <th>単価</th>
-                <th>合計金額</th>
-                <th>耐用年数</th>
-                <th>累計減価償却</th>
-                <th>帳簿価額</th>
-                <th>減価償却状況</th>
+                <th>耐用年数 (年)</th>
+                <th>減価償却</th>
+                <th>使用不能</th>
+                <th>貸出可能</th>
+                <th>設置場所</th>
+                <th>使用期限</th>
             </tr>
         </thead>
-        <!-- テーブル本体 -->
         <tbody>
-            <tr th:each="equipment : ${equipments}" th:class="${equipment.isBroken} ? 'broken-equipment' : ''">
-                <!-- 設備名 -->
+            <!-- 
+            設備一覧のデータ表示
+            各設備の状態に応じて行のCSSクラスを動的に設定：
+            - broken-equipment: 故障設備  
+            - depreciation-completed: 減価償却完了設備
+            -->
+            <tr th:each="equipment : ${equipments}"
+                th:class="${equipment.isBroken ? 'broken-equipment' : 
+                           (equipment.elapsedYears != null and equipment.lifespanYears != null and equipment.elapsedYears >= equipment.lifespanYears) ? 'depreciation-completed' : ''}">
+                
+                <!-- ラジオボタン -->
+                <td>
+                    <input type="radio" name="selectedEquipment" th:value="${equipment.id}" class="radio-select" onclick="toggleRadioSelection(this)">
+                </td>
+                <!-- 管理番号 -->
+                <td th:text="${equipment.managementNumber}"></td>
+                <!-- 品名 -->
                 <td th:text="${equipment.name}"></td>
                 <!-- 型番 -->
-                <td th:text="${equipment.modelNumber ?: '-'}"></td>
+                <td th:text="${equipment.modelNumber}"></td>
                 <!-- メーカー -->
-                <td th:text="${equipment.manufacturer ?: '-'}"></td>
+                <td th:text="${equipment.manufacturer}"></td>
                 <!-- 仕様 -->
                 <td class="preserve-linebreaks" th:text="${equipment.specification ?: '-'}"></td>
                 <!-- 購入日 -->
-                <td
-                    th:text="${equipment.purchaseDate != null ? #temporals.format(equipment.purchaseDate, 'yyyy/MM/dd') : '-'}">
-                </td>
-                <!-- 台数 -->
-                <td th:text="${equipment.quantity}"></td>
-                <!-- 単価 -->
-                <td th:text="${#numbers.formatDecimal(equipment.cost, 1, 'COMMA', 0, 'POINT')}"></td>
-                <!-- 合計金額 -->
-                <td th:text="${#numbers.formatDecimal(equipment.cost * equipment.quantity, 1, 'COMMA', 0, 'POINT')}"></td>
+                <td th:text="${equipment.purchaseDate}"></td>
                 <!-- 耐用年数 -->
-                <td th:text="${equipment.lifespanYears > 0 ? equipment.lifespanYears + '年' : '-'}"></td>
-                <!-- 累計減価償却 -->
-                <td th:text="${#numbers.formatDecimal((equipment.cost * equipment.quantity) - equipment.bookValue, 1, 'COMMA', 0, 'POINT')}">
+                <td th:text="${equipment.lifespanYears}"></td>
+                
+                <!-- 
+                減価償却状況の表示
+                減価償却完了の場合は特別なスタイルを適用
+                -->
+                <td th:class="${equipment.elapsedYears != null and equipment.lifespanYears != null and equipment.elapsedYears >= equipment.lifespanYears ? 'depreciation-completed-cell' : ''}">
+                    <span th:if="${equipment.elapsedYears != null and equipment.lifespanYears != null}">
+                        <span th:text="${equipment.elapsedYears >= equipment.lifespanYears ? '終了' : ''}"></span>
+                    </span>
+                    <span th:if="${equipment.elapsedYears == null or equipment.lifespanYears == null}">-</span>
                 </td>
-                <!-- 帳簿価額 -->
-                <td th:text="${#numbers.formatDecimal(equipment.bookValue, 1, 'COMMA', 0, 'POINT')}"></td>
-                <!-- 減価償却状況 -->
-                <td th:text="${equipment.depreciationStatus == '終了' ? '終了' : ''}"></td>
-            </tr>
-            <!-- 設備がない場合のメッセージ -->
-            <tr th:if="${equipments.isEmpty()}">
-                <td colspan="12" style="text-align: center;">表示する設備がありません。</td>
+                
+                <!-- 使用不能フラグ（故障状態）〇マーク表示 -->
+                <td class="circle" th:text="${equipment.isBroken} ? '〇' : ''"></td>
+                <!-- 貸出可能フラグ 〇マーク表示 -->
+                <td class="circle" th:text="${equipment.isAvailableForLoan} ? '〇' : ''"></td>
+                
+                <!-- 
+                設置場所の表示
+                コードから日本語表示名に変換
+                -->
+                <td>
+                    <span th:if="${equipment.locationCode != null}">
+                        <span th:text="${@locationRepository.findById(T(java.lang.Integer).parseInt(equipment.locationCode)).orElse(new com.example.equipmentmanagement.entity.Location()).getName()}"></span>
+                    </span>
+                    <span th:if="${equipment.locationCode == null}">不明</span>
+                </td>
+                
+                <!-- 使用期限（設定されている場合のみ表示） -->
+                <td th:text="${equipment.usageDeadline != null} ? '〜' + ${#dates.format(equipment.usageDeadline, 'yyyy/MM/dd')} : ''"></td>
             </tr>
         </tbody>
     </table>
+
+    <!-- 検索結果がない場合のメッセージ -->
+    <div th:if="${equipments.isEmpty() && searchType == null}" class="search-result-info no-results">
+        <h3>設備が登録されていません</h3>
+        <p>新規登録ボタンから設備を登録してください。</p>
+    </div>
+
+    <script>
+        // ラジオボタンの選択を切り替える関数
+        function toggleRadioSelection(radio) {
+            // すでに選択されているラジオボタンをクリックした場合は選択解除
+            if (radio.checked && radio.hasAttribute('data-was-checked')) {
+                radio.checked = false;
+                radio.removeAttribute('data-was-checked');
+            } else {
+                // 他のラジオボタンからdata-was-checked属性を削除
+                document.querySelectorAll('input[name="selectedEquipment"]').forEach(function(r) {
+                    r.removeAttribute('data-was-checked');
+                });
+                // 選択したラジオボタンにdata-was-checked属性を追加
+                radio.setAttribute('data-was-checked', 'true');
+            }
+        }
+
+        // 編集ボタンがクリックされたときの処理
+        function editSelectedEquipment() {
+            const selectedRadio = document.querySelector('input[name="selectedEquipment"]:checked');
+            
+            if (selectedRadio) {
+                // 選択された設備のIDを取得して編集画面に遷移
+                const equipmentId = selectedRadio.value;
+                window.location.href = '/equipment/edit?id=' + equipmentId;
+            } else {
+                // 何も選択されていない場合はエラーメッセージを表示
+                const errorTooltip = document.getElementById('errorTooltip');
+                errorTooltip.style.display = 'block';
+                
+                // 3秒後にエラーメッセージを非表示にする
+                setTimeout(function() {
+                    errorTooltip.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
 </body>
 
 </html>

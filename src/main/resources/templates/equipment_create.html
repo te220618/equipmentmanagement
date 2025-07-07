@@ -162,7 +162,7 @@
         <form th:action="@{/equipment/create}" method="post" th:object="${equipment}">
             <table>
                 <tr>
-                    <th>カテゴリー <span class="required">*</span></th>
+                    <th>メインカテゴリー <span class="required">*</span></th>
                     <td>
                         <select id="categoryCode" th:field="*{categoryCode}" required>
                             <option value="" selected>選択してください</option>
@@ -215,6 +215,47 @@
                 <tr>
                     <th>数量 <span class="required">*</span></th>
                     <td><input type="number" min="1" th:field="*{quantity}" required /></td>
+                </tr>
+                <tr>
+                    <th>設置場所 <span class="required">*</span></th>
+                    <td>
+                        <select th:field="*{locationCode}" required>
+                            <option value="" disabled th:selected="${equipment.locationCode == null}">選択してください</option>
+                            <option th:each="loc : ${locations}" th:value="${loc.id}"
+                                    th:text="${loc.name}"></option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>使用不能</th>
+                    <td>
+                        <div class="checkbox-container">
+                            <input type="checkbox" th:field="*{isBroken}" />
+                            <label>使用できない状態です</label>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <th>貸出可能</th>
+                    <td>
+                        <div class="checkbox-container">
+                            <input type="checkbox" th:field="*{isAvailableForLoan}" />
+                            <label>貸出が可能です</label>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <th>使用期限</th>
+                    <td>
+                        <div class="date-inputs">
+                            <input type="number" name="usageDeadlineYear" min="1900" max="2100" placeholder="年">
+                            <span>年</span>
+                            <input type="number" name="usageDeadlineMonth" min="1" max="12" placeholder="月">
+                            <span>月</span>
+                            <input type="number" name="usageDeadlineDay" min="1" max="31" placeholder="日">
+                            <span>日</span>
+                        </div>
+                    </td>
                 </tr>
             </table>
             
